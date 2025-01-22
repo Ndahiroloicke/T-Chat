@@ -4,7 +4,7 @@ import java.util.*;
 
 public class GroupChat {
     private static final String TERMINATE = "Exit";
-    private static final String MULTICAST_IP = "224.0.0.1"; // Fixed multicast IP
+    private static final String MULTICAST_IP = "225.0.0.1"; // Updated multicast IP
     static String name;
     static volatile boolean finished = false;
 
@@ -32,7 +32,7 @@ public class GroupChat {
             System.out.println("1. Tech Talk (Port 5000)");
             System.out.println("2. Music Chat (Port 5001)");
             System.out.println("3. General Discussion (Port 5002)");
-            System.out.print("\nEnter the port number to join a private channel or choose one of the above public channel: ");
+            System.out.print("\nEnter the port number to join a private channel or choose one of the above public channels: ");
 
             port = sc.nextInt();
             sc.nextLine(); // Consume the newline character
@@ -51,8 +51,12 @@ public class GroupChat {
             InetAddress group = InetAddress.getByName(MULTICAST_IP);
             MulticastSocket socket = new MulticastSocket(port);
 
-            // Set TTL to 0 (local network only)
-            socket.setTimeToLive(0);
+            // Set TTL for LAN communication
+            socket.setTimeToLive(1);
+
+            // Bind to the correct network interface
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+            socket.setNetworkInterface(networkInterface);
 
             // Join the multicast group
             socket.joinGroup(group);
@@ -79,10 +83,10 @@ public class GroupChat {
                 socket.send(datagram);
             }
         } catch (SocketException se) {
-            System.out.println("Error creating socket");
+            System.out.println("Error creating socket: Check if the port is in use or multicast traffic is blocked.");
             se.printStackTrace();
         } catch (IOException ie) {
-            System.out.println("Error reading/writing from/to socket");
+            System.out.println("Error reading/writing from/to socket: Ensure the network supports multicast traffic.");
             ie.printStackTrace();
         }
     }
@@ -115,7 +119,12 @@ class ReadThread implements Runnable {
                     System.out.println(message);
                 }
             } catch (IOException e) {
-                System.out.println("Socket closed!");
+                if (GroupChat.finished) {
+                    System.out.println("Socket closed!");
+                } else {
+                    System.out.println("Error receiving message: Ensure the multicast address and port are correct.");
+                    e.printStackTrace();
+                }
             }
         }
     }
