@@ -54,9 +54,15 @@ public class GroupChat {
             // Set TTL for LAN communication
             socket.setTimeToLive(1);
 
-            // Bind to the correct network interface
-            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
-            socket.setNetworkInterface(networkInterface);
+            // Find and bind to the Wi-Fi network interface
+            NetworkInterface wifiInterface = findWiFiInterface();
+            if (wifiInterface != null) {
+                socket.setNetworkInterface(wifiInterface);
+                System.out.println("Bound to Wi-Fi interface: " + wifiInterface.getDisplayName());
+            } else {
+                System.out.println("Wi-Fi interface not found. Ensure Wi-Fi is active.");
+                return;
+            }
 
             // Join the multicast group
             socket.joinGroup(group);
@@ -89,6 +95,21 @@ public class GroupChat {
             System.out.println("Error reading/writing from/to socket: Ensure the network supports multicast traffic.");
             ie.printStackTrace();
         }
+    }
+
+    // Find the Wi-Fi network interface
+    private static NetworkInterface findWiFiInterface() throws SocketException {
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface networkInterface = interfaces.nextElement();
+            if (networkInterface.isUp() && !networkInterface.isLoopback()) {
+                String name = networkInterface.getDisplayName().toLowerCase();
+                if (name.contains("wi-fi") || name.contains("wlan")) { // Match common Wi-Fi names
+                    return networkInterface;
+                }
+            }
+        }
+        return null; // Return null if no Wi-Fi interface is found
     }
 }
 
